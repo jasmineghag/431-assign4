@@ -347,6 +347,7 @@ void pageRankParallelAtomic(Graph &g, int max_iters, int n_threads, int strategy
 
   std::cout << "Reading graph" << endl;
   std::cout << "Created graph" << endl;
+  
   std::cout << "thread_id, num_vertices, num_edges, barrier1_time, barrier2_time, getNextVertex_time, total_time" << endl;
   for (int i = 0; i < n_threads; i++) 
   {
