@@ -363,7 +363,15 @@ void pageRankParallel(Graph &g, int max_iters, int n_threads, int strategy, int 
 
   time_taken = t1.stop();
   // -------------------------------------------------------------------
-  
+  std::cout << "Using DOUBLE\n";
+  std::cout << "Number of Threads : " << n_threads << endl;
+  std::cout << "Strategy : " << strategy << endl;
+  std::cout << "Granularity : " << granularity << endl;
+  std::cout << "Iterations : " << max_iters << endl;
+
+  std::cout << "Reading graph" << endl;
+  std::cout << "Created graph" << endl;
+
   std::cout << "thread_id, num_vertices, num_edges, barrier1_time, barrier2_time, getNextVertex_time, total_time" << endl;
   for (int i = 0; i < n_threads; i++) 
   {
@@ -387,16 +395,6 @@ void pageRankParallel(Graph &g, int max_iters, int n_threads, int strategy, int 
   {
     sum_of_page_ranks += pr_curr[u];
   }
-
-  std::cout << "Using DOUBLE\n";
-  std::cout << "Number of Threads : " << n_threads << endl;
-  std::cout << "Strategy : " << strategy << endl;
-  std::cout << "Granularity : " << granularity << endl;
-  std::cout << "Iterations : " << max_iters << endl;
-
-  std::cout << "Reading graph" << endl;
-  std::cout << "Created graph" << endl;
-
   std::cout << "Sum of page ranks : " << sum_of_page_ranks << "\n";
   std::cout << "Time taken (in seconds) : " << time_taken << "\n";
   delete[] pr_curr;
