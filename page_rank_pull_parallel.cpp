@@ -39,7 +39,6 @@ void pageRankHelper1(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, uin
     // for each vertex 'v', process all its inNeighbors 'u'
     for (uintV v = start; v < end; v++) 
     {
-      t_barrier1.start();
       uintE in_degree = g.vertices_[v].getInDegree();
       edges_processed += in_degree;  // Update edges_processed
       for (uintE i = 0; i < in_degree; i++) 
@@ -51,26 +50,27 @@ void pageRankHelper1(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, uin
           pr_next[v] += (pr_curr[u] / (PageRankType) u_out_degree);
         }
       }
-      time_taken_barrier1 += t_barrier1.stop();
     }
     // Wait for all threads to complete computation
+    t_barrier1.start();
     barrier1.wait();
+    time_taken_barrier1 += t_barrier1.stop();
 
     // Update PageRanks using the computed values
     for (uintV v = start; v < end; v++) 
     {
-      t_barrier2.start();
       {
         pr_next[v] = PAGE_RANK(pr_next[v]);
-
         // reset pr_curr for the next iteration
         pr_curr[v] = pr_next[v];
         pr_next[v] = 0.0;
       }
-      time_taken_barrier2 += t_barrier2.stop();
+      
     }
     // Wait for all threads to complete updating PageRanks
+    t_barrier2.start();
     barrier2.wait();
+    time_taken_barrier2 += t_barrier2.stop();
   }
 
   vertices_processed = end - start;   // Update vertices_processed
@@ -92,7 +92,6 @@ void pageRankHelper2(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, uin
     // for each vertex 'v', process all its inNeighbors 'u'
     for (uintV v = start; v < end; v++) 
     {
-      t_barrier1.start();
       uintE in_degree = g.vertices_[v].getInDegree();
       edges_processed += in_degree;  // Update edges_processed
 
@@ -105,15 +104,15 @@ void pageRankHelper2(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, uin
           pr_next[v] += (pr_curr[u] / (PageRankType) u_out_degree);
         }
       }
-      time_taken_barrier1 += t_barrier1.stop();
     }
     // Wait for all threads to complete computation
+    t_barrier1.start();
     barrier1.wait();
+    time_taken_barrier1 += t_barrier1.stop();
 
     // Update PageRanks using the computed values
     for (uintV v = start; v < end; v++) 
     {
-      t_barrier2.start();
       {
         pr_next[v] = PAGE_RANK(pr_next[v]);
 
@@ -121,10 +120,11 @@ void pageRankHelper2(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, uin
         pr_curr[v] = pr_next[v];
         pr_next[v] = 0.0;
       }
-      time_taken_barrier2 += t_barrier2.stop();
     }
     // Wait for all threads to complete updating PageRanks
+    t_barrier2.start();
     barrier2.wait();
+    time_taken_barrier2 += t_barrier2.stop();
   }
 
   vertices_processed = end - start;   // Update vertices_processed 
@@ -168,7 +168,6 @@ void pageRankHelper3(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
       if (v == -1) break;
       vertices_processed++;
 
-      t_barrier1.start();
       uintE in_degree = g.vertices_[v].getInDegree();
       edges_processed += in_degree;
       for (uintE i = 0; i < in_degree; i++) {
@@ -178,9 +177,10 @@ void pageRankHelper3(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
           pr_next[v] += (pr_curr[u] / (PageRankType) u_out_degree);
         }
       }
-      time_taken_barrier1 += t_barrier1.stop();
     }
+    t_barrier1.start();
     barrier1.wait();
+    time_taken_barrier1 += t_barrier1.stop();
 
     while (true) {
       t_getNextVertex.start();
@@ -189,13 +189,13 @@ void pageRankHelper3(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
 
       if (v == -1) break;
 
-      t_barrier2.start();
       pr_next[v] = PAGE_RANK(pr_next[v]);
       pr_curr[v] = pr_next[v];
       pr_next[v] = 0.0;
-      time_taken_barrier2 += t_barrier2.stop();
     }
+    t_barrier2.start();
     barrier2.wait();
+    time_taken_barrier2 += t_barrier2.stop();
   }
   total_time_taken = t_total.stop();
 }
@@ -223,7 +223,6 @@ void pageRankHelper4(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
       for (uintV v = v_start; v < std::min(v_start + granularity, n); v++) {
         vertices_processed++;
 
-        t_barrier1.start();
         uintE in_degree = g.vertices_[v].getInDegree();
         edges_processed += in_degree;
         for (uintE i = 0; i < in_degree; i++) {
@@ -233,10 +232,12 @@ void pageRankHelper4(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
             pr_next[v] += (pr_curr[u] / (PageRankType) u_out_degree);
           }
         }
-        time_taken_barrier1 += t_barrier1.stop();
       }
     }
+    t_barrier1.start();
     barrier1.wait();
+    time_taken_barrier1 += t_barrier1.stop();
+
 
     while (true) {
       t_getNextVertex.start();
@@ -246,14 +247,14 @@ void pageRankHelper4(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
       if (v_start == -1) break;
 
       for (uintV v = v_start; v < std::min(v_start + granularity, n); v++) {
-        t_barrier2.start();
         pr_next[v] = PAGE_RANK(pr_next[v]);
         pr_curr[v] = pr_next[v];
         pr_next[v] = 0.0;
-        time_taken_barrier2 += t_barrier2.stop();
       }
     }
+    t_barrier2.start();
     barrier2.wait();
+    time_taken_barrier2 += t_barrier2.stop();
   }
   total_time_taken = t_total.stop();
 }
@@ -363,14 +364,6 @@ void pageRankParallel(Graph &g, int max_iters, int n_threads, int strategy, int 
 
   time_taken = t1.stop();
   // -------------------------------------------------------------------
-  std::cout << "Using DOUBLE\n";
-  std::cout << "Number of Threads : " << n_threads << endl;
-  std::cout << "Strategy : " << strategy << endl;
-  std::cout << "Granularity : " << granularity << endl;
-  std::cout << "Iterations : " << max_iters << endl;
-
-  std::cout << "Reading graph" << endl;
-  std::cout << "Created graph" << endl;
 
   std::cout << "thread_id, num_vertices, num_edges, barrier1_time, barrier2_time, getNextVertex_time, total_time" << endl;
   for (int i = 0; i < n_threads; i++) 
