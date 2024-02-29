@@ -138,15 +138,20 @@ void pageRankHelperAtomic2(Graph &g, int max_iters, int n_threads, uintV start, 
 }
 
 uintV getNextVertexToBeProcessed(int granularity, uintV n, std::atomic<uintV> &next_vertex) {
-  return next_vertex.fetch_add(granularity);
+  uintV current = next_vertex.fetch_add(granularity);
+  if (current >= n) {
+    return n; // Return n to indicate that there are no more vertices to process
+  }
+  return current;
 }
 
-void pageRankHelperAtomic3(Graph &g, int max_iters, int granularity, std::atomic<uintV> &next_vertex, double &vertices_processed, double &edges_processed, std::atomic<PageRankType> *pr_curr, std::atomic<PageRankType> *pr_next, CustomBarrier &barrier1, CustomBarrier &barrier2, double &total_time_taken, double &time_taken_barrier1, double &time_taken_barrier2, double &getNextVertex_time) 
+void pageRankHelperAtomic3(Graph &g, int max_iters, std::atomic<uintV> &next_vertex, double &vertices_processed, double &edges_processed, std::atomic<PageRankType> *pr_curr, std::atomic<PageRankType> *pr_next, CustomBarrier &barrier1, CustomBarrier &barrier2, double &total_time_taken, double &time_taken_barrier1, double &time_taken_barrier2, double &getNextVertex_time) 
 {
   uintV n = g.n_;
 
   timer t_barrier1;
   timer t_barrier2;
+  timer t_nextVertex;
   timer t_total;
   t_total.start();
 
@@ -158,7 +163,9 @@ void pageRankHelperAtomic3(Graph &g, int max_iters, int granularity, std::atomic
     uintE local_vertices_processed = 0;
 
     while (true) {
-      uintV u = getNextVertexToBeProcessed(granularity, n, next_vertex);
+      t_nextVertex.start();
+      uintV u = getNextVertexToBeProcessed(1, n, next_vertex);
+      getNextVertex_time += t_nextVertex.stop();
       if (u == -1) break;
       local_edges_processed += g.vertices_[u].getOutDegree();
 
@@ -172,7 +179,10 @@ void pageRankHelperAtomic3(Graph &g, int max_iters, int granularity, std::atomic
     time_taken_barrier1 += t_barrier1.stop();
 
     while (true) {
-      uintV v = getNextVertexToBeProcessed(granularity, n, next_vertex);
+      t_nextVertex.start();
+      uintV v = getNextVertexToBeProcessed(1, n, next_vertex);
+      getNextVertex_time += t_nextVertex.stop();
+      
       if (v == -1) break;
       local_vertices_processed++;
 
@@ -185,13 +195,10 @@ void pageRankHelperAtomic3(Graph &g, int max_iters, int granularity, std::atomic
     barrier2.wait();
     time_taken_barrier2 += t_barrier2.stop();
 
-    total_getNextVertex_time += (t_barrier1.stop() + t_barrier2.stop());
-
     edges_processed = local_edges_processed;
     vertices_processed = local_vertices_processed;
   }
   total_time_taken = t_total.stop();
-  getNextVertex_time = total_getNextVertex_time;
 }
 
 void pageRankHelperAtomic4(Graph &g, int max_iters, int n_threads, int granularity, std::atomic<uintV> &next_vertex, double &vertices_processed, double &edges_processed, std::atomic<PageRankType> *pr_curr, std::atomic<PageRankType> *pr_next, CustomBarrier &barrier1, CustomBarrier &barrier2, double &total_time_taken, double &time_taken_barrier1, double &time_taken_barrier2, double &getNextVertex_time) 
@@ -200,6 +207,7 @@ void pageRankHelperAtomic4(Graph &g, int max_iters, int n_threads, int granulari
 
   timer t_barrier1;
   timer t_barrier2;
+  timer t_nextVertex;
   timer t_total;
   t_total.start();
 
@@ -211,7 +219,10 @@ void pageRankHelperAtomic4(Graph &g, int max_iters, int n_threads, int granulari
     uintE local_vertices_processed = 0;
 
     while (true) {
+      t_nextVertex.start();
       uintV u_start = getNextVertexToBeProcessed(granularity, n, next_vertex);
+      getNextVertex_time += t_nextVertex.stop();
+
       if (u_start >= n) break;
       uintV u_end = std::min(u_start + granularity, n);
       for (uintV u = u_start; u < u_end; u++) {
@@ -228,8 +239,10 @@ void pageRankHelperAtomic4(Graph &g, int max_iters, int n_threads, int granulari
     time_taken_barrier1 += t_barrier1.stop();
 
     while (true) {
-    
+      t_nextVertex.start();
       uintV v_start = getNextVertexToBeProcessed(granularity, n, next_vertex);
+      getNextVertex_time += t_nextVertex.stop();
+
       if (v_start >= n) break;
       uintV v_end = std::min(v_start + granularity, n);
       for (uintV v = v_start; v < v_end; v++) {
@@ -242,14 +255,11 @@ void pageRankHelperAtomic4(Graph &g, int max_iters, int n_threads, int granulari
     t_barrier2.start();
     barrier2.wait();
     time_taken_barrier2 += t_barrier2.stop();
-    total_getNextVertex_time += (t_barrier1.stop() + t_barrier2.stop());
 
     edges_processed = local_edges_processed;
     vertices_processed = local_vertices_processed;
   }
   total_time_taken = t_total.stop();
-  getNextVertex_time = total_getNextVertex_time;
-
 }
 
 void pageRankParallelAtomic(Graph &g, int max_iters, int n_threads, int strategy, int granularity) 
@@ -324,7 +334,7 @@ void pageRankParallelAtomic(Graph &g, int max_iters, int n_threads, int strategy
   {
     for (int i = 0; i < n_threads; ++i) 
     {
-    threads.emplace_back(pageRankHelperAtomic3, std::ref(g), max_iters, granularity, std::ref(next_vertex), std::ref(vertices_processed[i]), std::ref(edges_processed[i]), pr_curr, pr_next, std::ref(barrier1), std::ref(barrier2), std::ref(thread_times[i]), std::ref(thread_times_barrier1[i]), std::ref(thread_times_barrier2[i]), std::ref(getNextVertex_times[i]));
+    threads.emplace_back(pageRankHelperAtomic3, std::ref(g), max_iters, std::ref(next_vertex), std::ref(vertices_processed[i]), std::ref(edges_processed[i]), pr_curr, pr_next, std::ref(barrier1), std::ref(barrier2), std::ref(thread_times[i]), std::ref(thread_times_barrier1[i]), std::ref(thread_times_barrier2[i]), std::ref(getNextVertex_times[i]));
     }
   } 
   else if(strategy == 4) 

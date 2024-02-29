@@ -152,18 +152,19 @@ uintE outDegree(Graph &g, uintV u) {
 void pageRankHelper3(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int max_iters, double &vertices_processed, double &edges_processed, CustomBarrier &barrier1, CustomBarrier &barrier2, double &total_time_taken, double &time_taken_barrier1, double &time_taken_barrier2, double &getNextVertex_time) 
 {
   uintV n = g.n_;
+  
   timer t_barrier1;
   timer t_barrier2;
-  timer t_getNextVertex;
+  timer t_nextVertex;
   timer t_total;
   t_total.start();
 
   for (int iter = 0; iter < max_iters; iter++) 
   {
     while (true) {
-      t_getNextVertex.start();
+      t_nextVertex.start();
       uintV v = getNextVertexToBeProcessed(1, n);
-      getNextVertex_time += t_getNextVertex.stop();
+      getNextVertex_time += t_nextVertex.stop();
 
       if (v == -1) break;
       vertices_processed++;
@@ -183,9 +184,9 @@ void pageRankHelper3(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
     time_taken_barrier1 += t_barrier1.stop();
 
     while (true) {
-      t_getNextVertex.start();
+      t_nextVertex.start();
       uintV v = getNextVertexToBeProcessed(1, n);
-      getNextVertex_time += t_getNextVertex.stop();
+      getNextVertex_time += t_nextVertex.stop();
 
       if (v == -1) break;
 
@@ -206,7 +207,7 @@ void pageRankHelper4(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
 
   timer t_barrier1;
   timer t_barrier2;
-  timer t_getNextVertex;
+  timer t_nextVertex;
 
   timer t_total;
   t_total.start();
@@ -214,9 +215,9 @@ void pageRankHelper4(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
   for (int iter = 0; iter < max_iters; iter++) 
   {
     while (true) {
-      t_getNextVertex.start();
+      t_nextVertex.start();
       uintV v_start = getNextVertexToBeProcessed(granularity, n);
-      getNextVertex_time += t_getNextVertex.stop();
+      getNextVertex_time += t_nextVertex.stop();
 
       if (v_start == -1) break;
 
@@ -238,11 +239,10 @@ void pageRankHelper4(Graph &g, PageRankType *pr_curr, PageRankType *pr_next, int
     barrier1.wait();
     time_taken_barrier1 += t_barrier1.stop();
 
-
     while (true) {
-      t_getNextVertex.start();
+      t_nextVertex.start();
       uintV v_start = getNextVertexToBeProcessed(granularity, n);
-      getNextVertex_time += t_getNextVertex.stop();
+      getNextVertex_time += t_nextVertex.stop();
 
       if (v_start == -1) break;
 
